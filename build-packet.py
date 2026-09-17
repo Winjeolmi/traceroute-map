@@ -1,15 +1,24 @@
 from scapy.all import IP, ICMP, sr1
 import sys # build-packet.py traceroute <destination IP> <max_hops>
-import time
+import time # To calculate execution time
+import socket
 
 # Checks if command line arguments were entered correctly
 if len(sys.argv) != 4:
     print("Please provide valid command line arguments")
     exit(0)
 
-# Third argument is destination IP, and fourth is max hops
-dest_ip = sys.argv[2]
+# Third argument is destination IP, check if valid domain name is input
+try:
+    dest_ip = socket.gethostbyname(sys.argv[2])
+except socket.gaierror:
+    print("Please enter a valid domain name")
+    exit(0)
+
+# Fourth argument is max hops
 max_hops = int(sys.argv[3])
+
+print("Resolving %s --> %s" % (sys.argv[2], dest_ip))
 
 # For i from 1 to max hops
 for i in range(1, max_hops+1):
