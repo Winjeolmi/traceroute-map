@@ -1,7 +1,7 @@
 import requests
 
 # Returns a dictionary of location information
-def geolocate(ip):
+def geolocate_ip(ip):
     # Check first if the IP is private
     if check_public_ip(ip) is False:
         return None
