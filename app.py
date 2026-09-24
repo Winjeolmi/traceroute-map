@@ -1,4 +1,4 @@
-from flask import Flask, request, Response
+from flask import Flask, request, Response, render_template
 from traceroute import run_traceroute
 from geolocate import geolocate_ip
 import json
@@ -8,7 +8,7 @@ app = Flask(__name__)
 # Base route
 @app.route("/")
 def home():
-    return "Hi"
+    return render_template("index.html")
 
 # Route for traceroute as it comes
 @app.route("/api/trace/stream")
@@ -33,6 +33,8 @@ def trace_stream():
 
             # Return hop
             yield f"event: hop\ndata: {json.dumps(hop)}\n\n"
+
+        yield f"event: done\ndata: {{}}\n\n"
 
     return Response(event_stream(), mimetype = "text/event-stream")
 
