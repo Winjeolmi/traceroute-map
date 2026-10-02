@@ -6,50 +6,70 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
+    <input type="text" id="target-input" placeholder="e.g. google.com or 8.8.8.8" />
+    <button id="trace-btn">Trace</button>
     <div id="map" style="height: 600px;"></div>
 
     <script>
         var map = L.map('map').setView([32.8, -97.0], 8);
         var pathLine = L.polyline([], {color: 'red'}).addTo(map);
-        var pathCoords = [];
-        var hopQueue = [];
-        var finished = false;
-
+        var currentMarkers = [];
+        var currentTimerID = null;
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        var source = new EventSource("/api/trace/stream?target=1.1.1.1");
-
-        source.addEventListener("hop", function(event) {
-            var hop = JSON.parse(event.data);
-            hopQueue.push(hop)
-        });
-
-        source.addEventListener("done", function(event) {
-            finished = true;
-            source.close();
-        });
-
-        var timerID = setInterval(function() {
-            if(hopQueue.length > 0) {
-                var hop = hopQueue.shift();
-                if(hop.geo == null) {
-
-                }
-                else {
-                    pathCoords.push([hop.geo.lat, hop.geo.lon])
-                    map.panTo([hop.geo.lat, hop.geo.lon], {
-                        animate: true,
-                        duration: 0.5
-                    })
-                    L.marker([hop.geo.lat, hop.geo.lon]).addTo(map);
-                    pathLine.setLatLngs(pathCoords);
-                }
+        function runTrace() {
+            if (currentTimerID !== null) {
+                clearInterval(currentTimerID);
             }
-            if(hopQueue.length == 0 && finished == true) {
-                console.log("Traceroute finished");
-                clearInterval(timerID);
-            }
-        }, 1000);
+            currentMarkers.forEach(function(marker) {
+                map.removeLayer(marker);
+            });
+            currentMarkers = [];
+            pathLine.setLatLngs([]);
+
+            var pathCoords = [];
+            var hopQueue = [];
+            var finished = false;
+            var target = document.getElementById("target-input").value;
+            var source = new EventSource("/api/trace/stream?target=" + target);
+
+            source.addEventListener("hop", function(event) {
+                var hop = JSON.parse(event.data);
+                hopQueue.push(hop)
+            });
+
+            source.addEventListener("done", function(event) {
+                finished = true;
+                source.close();
+            });
+
+            currentTimerID = setInterval(function() {
+                if(hopQueue.length > 0) {
+                    var hop = hopQueue.shift();
+                    if(hop.geo == null) {
+
+                    }
+                    else {
+                        pathCoords.push([hop.geo.lat, hop.geo.lon])
+                        map.panTo([hop.geo.lat, hop.geo.lon], {
+                            animate: true,
+                            duration: 0.5
+                        })
+                        var marker = L.marker([hop.geo.lat, hop.geo.lon]).addTo(map);
+                        currentMarkers.push(marker);
+                        pathLine.setLatLngs(pathCoords);
+                    }
+                }
+                if(hopQueue.length == 0 && finished == true) {
+                    console.log("Traceroute finished");
+                    clearInterval(timerID);
+                }
+            }, 1000);
+        }
+
+        document.getElementById("trace-btn").addEventListener("click", function() {
+            runTrace();
+        });
     </script>
 </body>
 </html>
