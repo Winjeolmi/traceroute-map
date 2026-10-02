@@ -4,11 +4,37 @@
     <title>Traceroute Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+    #hops-table {
+        border-collapse: collapse;
+        font-family: sans-serif;
+        font-size: 14px;
+    }
+
+    #hops-table th, #hops-table td {
+        border: 1px solid #ccc;
+        padding: 6px 10px;
+        text-align: left;
+    }
+
+    #hops-table th {
+        background-color: #f0f0f0;
+    }
+    </style>
 </head>
 <body>
     <input type="text" id="target-input" placeholder="e.g. google.com or 8.8.8.8" />
     <button id="trace-btn">Trace</button>
-    <div id="map" style="height: 600px;"></div>
+
+    <div style="display: flex;">
+        <div id="map" style="height: 600px; width: 70%;"></div>
+        <table id="hops-table" style="width: 30%;">
+            <thead>
+                <tr><th>Hop</th><th>IP</th><th>Location</th><th>RTT (ms)</th></tr>
+            </thead>
+            <tbody id="hops-tbody"></tbody>
+        </table>
+    </div>
 
     <script>
         var map = L.map('map').setView([32.8, -97.0], 8);
@@ -32,6 +58,7 @@
             var finished = false;
             var target = document.getElementById("target-input").value;
             var source = new EventSource("/api/trace/stream?target=" + target);
+            document.getElementById("hops-tbody").innerHTML = "";
 
             source.addEventListener("hop", function(event) {
                 var hop = JSON.parse(event.data);
@@ -46,6 +73,19 @@
             currentTimerID = setInterval(function() {
                 if(hopQueue.length > 0) {
                     var hop = hopQueue.shift();
+                    
+                    var locationText;
+                    if (hop.geo == null) {
+                        locationText = "Private IP / no location";
+                    } 
+                    else {
+                        locationText = hop.geo.city + ", " + hop.geo.country;
+                    }
+
+                    var row = document.createElement("tr");
+                    row.innerHTML = "<td>" + hop.ttl + "</td><td>" + (hop.ip || "—") + "</td><td>" + locationText + "</td><td>" + (hop.rtt_ms || "—") + "</td>";
+                    document.getElementById("hops-tbody").appendChild(row);
+
                     if(hop.geo == null) {
 
                     }
